@@ -181,7 +181,7 @@
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
 	phy-supply = <&reg_peri_3v3>;
-	status = "okay";
+	status = "disable";
 };
 
 &fec2 {
@@ -189,6 +189,9 @@
 	pinctrl-0 = <&pinctrl_enet2>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy1>;
+	phy-reset-gpios = <&gpio5 6 GPIO_ACTIVE_LOW>;
+	phy-reset-duration = <15>;
+	phy-reset-post-delay = <15>;
 	phy-supply = <&reg_peri_3v3>;
 	status = "okay";
 

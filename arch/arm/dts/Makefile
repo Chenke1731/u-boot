@@ -278,7 +278,8 @@ dtb-$(CONFIG_ARCH_MVEBU) +=			\
 	cn9132-db-A.dtb				\
 	cn9132-db-B.dtb				\
 	cn9130-crb-A.dtb			\
-	cn9130-crb-B.dtb
+	cn9130-crb-B.dtb			\
+	ac5-98dx35xx-rd.dtb
 endif
 
 dtb-$(CONFIG_ARCH_SYNQUACER) += synquacer-sc2a11-developerbox.dtb
@@ -382,6 +383,8 @@ dtb-$(CONFIG_ARCH_VERSAL) += \
 	versal-mini.dtb \
 	versal-mini-emmc0.dtb \
 	versal-mini-emmc1.dtb \
+	versal-mini-ospi-single.dtb \
+	versal-mini-qspi-single.dtb \
 	xilinx-versal-virt.dtb
 dtb-$(CONFIG_ARCH_VERSAL_NET) += \
 	versal-net-mini.dtb \
@@ -978,6 +981,7 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
 	imx8mp-dhcom-pdk2.dtb \
 	imx8mp-evk.dtb \
 	imx8mp-icore-mx8mp-edimm2.2.dtb \
+	imx8mp-msc-sm2s.dtb \
 	imx8mp-phyboard-pollux-rdk.dtb \
 	imx8mp-venice.dtb \
 	imx8mp-venice-gw74xx.dtb \

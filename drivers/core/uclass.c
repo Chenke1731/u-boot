@@ -149,6 +149,7 @@ int uclass_get(enum uclass_id id, struct uclass **ucp)
 	/* Immediately fail if driver model is not set up */
 	if (!gd->uclass_root)
 		return -EDEADLK;
+
 	*ucp = NULL;
 	uc = uclass_find(id);
 	if (!uc) {
@@ -156,6 +157,8 @@ int uclass_get(enum uclass_id id, struct uclass **ucp)
 			return -ENOENT;
 		return uclass_add(id, ucp);
 	}
+
+
 	*ucp = uc;
 
 	return 0;
@@ -635,7 +638,7 @@ int uclass_first_device_check(enum uclass_id id, struct udevice **devp)
 	int ret;
 
 	*devp = NULL;
-	ret = uclass_find_first_device(id, devp);
+	ret = uclass_find_first_device(id, devp);	// TODO: devp是怎么来的，谁申请的？
 	if (ret)
 		return ret;
 	if (!*devp)

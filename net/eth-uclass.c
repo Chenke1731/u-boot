@@ -238,7 +238,7 @@ static int eth_write_hwaddr(struct udevice *dev)
 }
 
 static int on_ethaddr(const char *name, const char *value, enum env_op op,
-	int flags)
+		      int flags)
 {
 	int index;
 	int retval;
@@ -423,7 +423,9 @@ int eth_initialize(void)
 	int num_devices = 0;
 	struct udevice *dev;
 
-	eth_common_init();
+	printf("[DEBUG] +++ [%s] [%s] [%d] +++\n",  __FILE__, __func__, __LINE__);
+
+	eth_common_init(); // 初始化PHY相关结构，注册PHY驱动
 
 	/*
 	 * Devices need to write the hwaddr even if not started so that Linux
@@ -432,6 +434,10 @@ int eth_initialize(void)
 	 * their write_hwaddr() operation.
 	 */
 	uclass_first_device_check(UCLASS_ETH, &dev);
+
+	printf("[DEBUG] +++ [%s] [%s] [%d], udev name:%s , uclass name:%s, driver name:%s, +++\n",
+		__FILE__, __func__, __LINE__, dev->name, dev->uclass->uc_drv->name, dev->driver->name);
+
 	if (!dev) {
 		log_err("No ethernet found.\n");
 		bootstage_error(BOOTSTAGE_ID_NET_ETH_START);

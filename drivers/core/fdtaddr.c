@@ -18,6 +18,11 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+
+/**NOTE - FDT，flatted device tree，扁平设备树
+ * NOTE - uboot通过解析dtb来获取板级设备信息
+ * TODO - 看驱动模型driver module的时候再来看
+ */
 fdt_addr_t devfdt_get_addr_index(const struct udevice *dev, int index)
 {
 #if CONFIG_IS_ENABLED(OF_REAL)
@@ -48,6 +53,8 @@ fdt_addr_t devfdt_get_addr_index(const struct udevice *dev, int index)
 			return FDT_ADDR_T_NONE;
 		}
 
+		printf("[DEBUG] [%s] [%s] [%d], devname:[%s], reg:[0x%x], len:[0x%x], index[%x], na[0x%x], ns[0x%x]\n",
+			__FILE__, __func__, __LINE__, dev->name, reg, len, index, na, ns);
 		reg += index * (na + ns);
 
 		if (ns) {
@@ -57,6 +64,8 @@ fdt_addr_t devfdt_get_addr_index(const struct udevice *dev, int index)
 			 */
 			addr = fdt_translate_address((void *)gd->fdt_blob,
 						     offset, reg);
+			printf("[DEBUG] [%s] [%s] [%d], devname:[%s], reg:[0x%x], addr:[0x%x]\n",
+				__FILE__, __func__, __LINE__, dev->name, reg, addr);
 		} else {
 			/* Non translatable if #size-cells == 0 */
 			addr = fdt_read_number(reg, na);

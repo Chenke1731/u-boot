@@ -545,6 +545,7 @@ int phy_init(void)
 	phy_realtek_init();
 #endif
 #ifdef CONFIG_PHY_SMSC
+	printf("[DEBUG] +++ [%s] [%s] [%d] +++\n", __FILE__, __func__, __LINE__);
 	phy_smsc_init();
 #endif
 #ifdef CONFIG_PHY_TERANETICS
@@ -574,6 +575,7 @@ int phy_init(void)
 #ifdef CONFIG_PHY_XILINX_GMII2RGMII
 	phy_xilinx_gmii2rgmii_init();
 #endif
+	printf("[DEBUG] +++ [%s] [%s] [%d] +++\n", __FILE__, __func__, __LINE__);
 	genphy_init();
 
 	return 0;

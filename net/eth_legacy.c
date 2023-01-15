@@ -17,6 +17,7 @@
 #include <linux/bug.h>
 #include <linux/errno.h>
 #include <net/pcap.h>
+#include <stdio.h>
 #include "eth_internal.h"
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -246,8 +247,10 @@ int eth_initialize(void)
 {
 	int num_devices = 0;
 
+	printf("[DEBUG] +++ %s-%s-%d +++\n", ____FILE__, __func__, __LINE__);
+
 	eth_devices = NULL;
-	eth_current = NULL;
+
 	eth_common_init();
 	/*
 	 * If board-specific initialization exists, call it.

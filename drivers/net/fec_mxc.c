@@ -1112,7 +1112,7 @@ static int fec_phy_init(struct fec_priv *priv, struct udevice *dev)
 /* FEC GPIO reset */
 static void fec_gpio_reset(struct fec_priv *priv)
 {
-	debug("fec_gpio_reset: fec_gpio_reset(dev)\n");
+	printf("fec_gpio_reset: fec_gpio_reset(dev)\n");
 	if (dm_gpio_is_valid(&priv->phy_reset_gpio)) {
 		dm_gpio_set_value(&priv->phy_reset_gpio, 1);
 		mdelay(priv->reset_delay);
@@ -1195,10 +1195,16 @@ static int fecmxc_probe(struct udevice *dev)
 		priv->clk_rate = clk_get_rate(&priv->ipg_clk);
 	}
 
+	/**NOTE - 申请BD描述符
+	 *
+	 */
 	ret = fec_alloc_descs(priv);
 	if (ret)
 		return ret;
 
+/**
+ * NOTE - 没进该处理
+ */
 #ifdef CONFIG_DM_REGULATOR
 	if (priv->phy_supply) {
 		ret = regulator_set_enable(priv->phy_supply, true);
@@ -1210,9 +1216,14 @@ static int fecmxc_probe(struct udevice *dev)
 #endif
 
 #if CONFIG_IS_ENABLED(DM_GPIO)
+	//NOTE - 操作eth reset并延时
 	fec_gpio_reset(priv);
 #endif
 	/* Reset chip. */
+	/**
+	 * NOTE - software reset Ethernet MAC, clears the ETHEREN field
+	 * TODO - 这里的reset和上面的gpio触发的reset是什么关系？
+	 */
 	writel(readl(&priv->eth->ecntrl) | FEC_ECNTRL_RESET,
 	       &priv->eth->ecntrl);
 	start = get_timer(0);
@@ -1224,9 +1235,13 @@ static int fecmxc_probe(struct udevice *dev)
 		udelay(10);
 	}
 
+	/**
+	 * 初始化FEC寄存器
+	 */
 	fec_reg_setup(priv);
 
 	priv->dev_id = dev_seq(dev);
+	printf("dev_name:%s, dev_id:%d\n", dev->name, priv->dev_id);
 
 #ifdef CONFIG_DM_ETH_PHY
 	bus = eth_phy_get_mdio_bus(dev);
@@ -1312,6 +1327,15 @@ static int fecmxc_of_to_plat(struct udevice *dev)
 	struct eth_pdata *pdata = dev_get_plat(dev);
 	struct fec_priv *priv = dev_get_priv(dev);
 
+	/**NOTE - 获取到fecmxc设备的iobase
+	 * NOTE - 直接将iobase地址转成fec ethernet寄存器信息
+	 * NOTE - iobase怎么来的？—— 从dts从读的，地址来源于芯片手册
+	 * LINK - arch/arm/dts/imx6ul.dtsi:526
+	 * TODO - 这个地址应该就是物理地址，怎么通过工具直接访问？
+	 * NOTE - ethernet reg是什么寄存器？——
+	 * 	  Ethernet MAC(ENET) register
+	 * 	  见《IMX6ULLRM.pdf》 22.5 Memory map/register definition
+	 */
 	pdata->iobase = dev_read_addr(dev);
 	priv->eth = (struct ethernet_regs *)pdata->iobase;
 
@@ -1319,16 +1343,31 @@ static int fecmxc_of_to_plat(struct udevice *dev)
 	if (pdata->phy_interface == PHY_INTERFACE_MODE_NA)
 		return -EINVAL;
 
+	/**NOTE - iobase: 0x20b4000
+	 * NOTE - phy_interface: PHY_INTERFACE_MODE_RMII
+	 */
+	printf("[DEBUG] +++ [%s] [%s] [%d], pdata->iobase:0x%lx, phy_interface:%d +++\n",
+		__FILE__, __func__, __LINE__, pdata->iobase, pdata->phy_interface);
+
 #ifdef CONFIG_DM_REGULATOR
+	//NOTE - CONFIG_DM_REGULATOR 定义了
 	device_get_supply_regulator(dev, "phy-supply", &priv->phy_supply);
 #endif
 
 #if CONFIG_IS_ENABLED(DM_GPIO)
+	/**NOTE - DM_GPIO ENABLED
+	 * LINK - arch/arm/dts/imx6ul-14x14-evk.dtsi:192
+	 * TODO - 通过phy-reset-gpios值申请GPIO资源，怎么理解，申请的资源是什么资源？
+	 */
 	ret = gpio_request_by_name(dev, "phy-reset-gpios", 0,
 				   &priv->phy_reset_gpio, GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
 	if (ret < 0)
 		return 0; /* property is optional, don't return error! */
 
+	/**NOTE - 通过phy-reset-duration值设置reset delay的时间
+	 * LINK - arch/arm/dts/imx6ul-14x14-evk.dtsi:193
+	 * NOTE - 设置为15ms
+	*/
 	priv->reset_delay = dev_read_u32_default(dev, "phy-reset-duration", 1);
 	if (priv->reset_delay > 1000) {
 		printf("FEC MXC: phy reset duration should be <= 1000ms\n");
@@ -1336,6 +1375,10 @@ static int fecmxc_of_to_plat(struct udevice *dev)
 		priv->reset_delay = 1;
 	}
 
+	/**NOTE - 通过phy-reset-post-delay值设置？这是什么时间？
+	 * LINK - arch/arm/dts/imx6ul-14x14-evk.dtsi:194
+	 * NOTE - 设置为15ms
+	*/
 	priv->reset_post_delay = dev_read_u32_default(dev,
 						      "phy-reset-post-delay",
 						      0);

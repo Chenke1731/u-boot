@@ -393,14 +393,14 @@ int device_of_to_plat(struct udevice *dev)
 	if (!dev)
 		return -EINVAL;
 
-	if (dev_get_flags(dev) & DM_FLAG_PLATDATA_VALID)
+	if (dev_get_flags(dev) & DM_FLAG_PLATDATA_VALID)	//TODO - flag什么时候置位的？
 		return 0;
 
 	/*
 	 * This is not needed if binding is disabled, since data is allocated
 	 * at build time.
 	 */
-	if (!CONFIG_IS_ENABLED(OF_PLATDATA_NO_BIND)) {
+	if (!CONFIG_IS_ENABLED(OF_PLATDATA_NO_BIND)) { 	//NOTE - binding才需要
 		/* Ensure all parents have ofdata */
 		if (dev->parent) {
 			ret = device_of_to_plat(dev->parent);
@@ -424,6 +424,15 @@ int device_of_to_plat(struct udevice *dev)
 	drv = dev->driver;
 	assert(drv);
 
+	/**NOTE - dev_has_ofnode 查询是否有下一级节点
+	 * TODO - 节点是什么含义，是否是根节点？
+	 * LINK - drivers/net/fec_mxc.c:1372
+	 * NOTE - 1. 从dts中获取iobase
+	 * 	  2. 获取phy-mode "RMII"
+	 * 	  3. phy-reset-gpios资源
+	 * 	  4. phy-reset-duration时间
+	 * 	  5. phy-reset-post-delay时间
+	 */
 	if (drv->of_to_plat &&
 	    (CONFIG_IS_ENABLED(OF_PLATDATA) || dev_has_ofnode(dev))) {
 		ret = drv->of_to_plat(dev);
@@ -431,7 +440,16 @@ int device_of_to_plat(struct udevice *dev)
 			goto fail;
 	}
 
+	/**
+	 * TODO - 这里会进很多次？
+	 * 	0x42: [1 6]
+	 * 	0x40: [6]
+	 * 	0x52: [1 4 6]
+	 * 	0x1052 : [1 4 6 12]
+	 */
 	dev_or_flags(dev, DM_FLAG_PLATDATA_VALID);
+	printf("[DEBUG] +++ [%s] [%s] [%d], dev flags:0x%x +++\n",
+		__FILE__, __func__, __LINE__, dev->flags_);
 
 	return 0;
 fail:
@@ -458,6 +476,7 @@ static int device_get_dma_constraints(struct udevice *dev)
 	u64 size = 0;
 	int ret;
 
+	//NOTE - 没有使能DMA
 	if (!CONFIG_IS_ENABLED(DM_DMA) || !parent || !dev_has_ofnode(parent))
 		return 0;
 
@@ -485,20 +504,46 @@ int device_probe(struct udevice *dev)
 	if (!dev)
 		return -EINVAL;
 
+	/**TODO -  DM_FLAG_ACTIVATED是什么时候置位的
+	 * NOTE - 递归probe设备的时候置位的
+	 * LINK - drivers/core/device.c:563
+	 * NOTE - 如果当前设备已经被probe，设备flag为active，直接退出
+	 */
 	if (dev_get_flags(dev) & DM_FLAG_ACTIVATED)
 		return 0;
 
+	/**NOTE - EVT_DM_PRE_PROBE 事件通知，依赖DM_EVENT事件使能
+	 * TODO - 1. 事件什么时候使能的？
+	 * TODO - 2. 谁来接收这个事件
+	 * TODO - 3. 接收这个事件干嘛，后处理是什么？
+	 */
 	ret = device_notify(dev, EVT_DM_PRE_PROBE);
 	if (ret)
 		return ret;
 
+	/**NOTE - 已经通过上层函数拿到了dev结构，里面有driver相关信息
+	 * NOTE - udev name:ethernet@20b4000 , uclass name:ethernet, driver name:fecmxc
+	 */
 	drv = dev->driver;
+
 	assert(drv);
 
+	/**NOTE - 探测udevice ethernet@20b4000 设备的各种信息，主要是找到设备，从dts中初始化信息
+	 */
 	ret = device_of_to_plat(dev);
 	if (ret)
 		goto fail;
 
+	/**NOTE - eth device tree
+	 * root_driver
+	 * 	soc
+	 * 		bus@2000000
+	 * 			ethernet@20b4000
+	 * 				ethernet-phy@1
+	 * 				ethernet-phy@2
+	 * TODO - 网络设备probe的顺序到底是怎么样的？观察到的顺序如下：(要考虑已经probe的设备情况，会直接退出)
+	 * 	ethernet@20b4000->ethernet-phy@1->ethernet-phy@2
+	 */
 	/* Ensure all parents are probed */
 	if (dev->parent) {
 		ret = device_probe(dev->parent);
@@ -510,6 +555,7 @@ int device_probe(struct udevice *dev)
 		 * the call to device_probe() on its parent device
 		 * (e.g. PCI bridge devices). Test the flags again
 		 * so that we don't mess up the device.
+		 * REVIEW - 这段话逻辑上是不是多余的？当前设备是否probe在该函数刚进来就已经判断过了
 		 */
 		if (dev_get_flags(dev) & DM_FLAG_ACTIVATED)
 			return 0;
@@ -520,6 +566,9 @@ int device_probe(struct udevice *dev)
 	if (CONFIG_IS_ENABLED(POWER_DOMAIN) && dev->parent &&
 	    (device_get_uclass_id(dev) != UCLASS_POWER_DOMAIN) &&
 	    !(drv->flags & DM_FLAG_DEFAULT_PD_CTRL_OFF)) {
+		//NOTE - 没进这个分支
+		dm_warn("%s: [DEBUG] +++ [%s] [%s] [%d] +++\n",
+			dev->name, __FILE__, __func__, __LINE__);
 		ret = dev_power_domain_on(dev);
 		if (ret)
 			goto fail;
@@ -539,22 +588,29 @@ int device_probe(struct udevice *dev)
 	 * probed by this call. This works because the DM_FLAG_ACTIVATED flag
 	 * is set just above. However, the PCI bus' probe() method and
 	 * associated uclass methods have not yet been called.
+	 * NOTE - pinctrl_enet1, pinctrl_enet2
+	 * TODO - 没看懂这是干啥
 	 */
 	if (dev->parent && device_get_uclass_id(dev) != UCLASS_PINCTRL) {
 		ret = pinctrl_select_state(dev, "default");
 		if (ret && ret != -ENOSYS)
-			log_debug("Device '%s' failed to configure default pinctrl: %d (%s)\n",
+			log_err("Device '%s' failed to configure default pinctrl: %d (%s)\n",
 				  dev->name, ret, errno_str(ret));
+		else
+			log_err("Device '%s' configure default pinctrl success: %d (%s)\n",
+				dev->name, ret, errno_str(ret));
 	}
 
 	if (CONFIG_IS_ENABLED(IOMMU) && dev->parent &&
 	    (device_get_uclass_id(dev) != UCLASS_IOMMU)) {
+		//NOTE - 没使能IOMMU
+		dm_warn("%s: [DEBUG] +++ [%s] [%s] [%d] +++\n", dev->name, __FILE__, __func__, __LINE__);
 		ret = dev_iommu_enable(dev);
 		if (ret)
 			goto fail;
 	}
 
-	ret = device_get_dma_constraints(dev);
+	ret = device_get_dma_constraints(dev);	// NOTE - 没使能DMA
 	if (ret)
 		goto fail;
 
@@ -580,7 +636,7 @@ int device_probe(struct udevice *dev)
 	}
 
 	if (drv->probe) {
-		ret = drv->probe(dev);
+		ret = drv->probe(dev);	// LINK - drivers/net/fec_mxc.c:1398
 		if (ret)
 			goto fail;
 	}

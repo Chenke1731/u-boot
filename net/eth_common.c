@@ -31,14 +31,17 @@ int eth_env_set_enetaddr_by_index(const char *base_name, int index,
 
 void eth_common_init(void)
 {
+	printf("[DEBUG] +++ [%s] [%s] [%d] +++\n", __FILE__, __func__, __LINE__);
 	bootstage_mark(BOOTSTAGE_ID_NET_ETH_START);
 #if CONFIG_IS_ENABLED(ETH)
 #if defined(CONFIG_MII) || defined(CONFIG_CMD_MII) || defined(CONFIG_PHYLIB)
+	printf("[DEBUG] +++ [%s] [%s] [%d] +++\n", __FILE__, __func__, __LINE__);
 	miiphy_init();
 #endif
 
 #ifdef CONFIG_PHYLIB
-	phy_init();
+	printf("[DEBUG] +++ [%s] [%s] [%d] +++\n", __FILE__, __func__, __LINE__);
+	phy_init(); // 注册PHY驱动 LAN8720A & Generic PHY
 #endif
 #endif
 }
